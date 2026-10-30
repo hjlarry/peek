@@ -650,7 +650,7 @@ func (a *app) projectTitle(c *ui.Context) {
 	})
 	b.Children(func() {
 		ui.Row(c).MinWidth(0).Gap(t.Space(1)).AlignItems(ui.Center).Children(func() {
-			ui.Text(c, path.Base(a.repo)).FontWeight(700).SingleLine().Ellipsis("…").Shrink(1).MinWidth(0)
+			ui.Text(c, toolbarName(path.Base(a.repo))).FontWeight(700).SingleLine().Ellipsis("…").Shrink(1).MinWidth(0)
 			ui.Icon(c, chevronIcon).Size(9, 9).Shrink(0).TextColor(t.TextMuted)
 		})
 	})

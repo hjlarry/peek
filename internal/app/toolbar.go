@@ -25,6 +25,17 @@ func (a *app) nativeToolbar(c *ui.Context) bool {
 // and the history to.
 const minSidebar, maxSidebar = 220, 560
 
+// toolbarName keeps both ends so related worktrees remain distinguishable.
+func toolbarName(name string) string {
+	const limit = 24
+	runes := []rune(name)
+	if len(runes) <= limit {
+		return name
+	}
+	const head = limit / 2
+	return string(runes[:head]) + "…" + string(runes[len(runes)-(limit-head-1):])
+}
+
 // toolbarSpec is the toolbar as the state has it now. Its items stay the
 // same, hidden where they do not apply, for the arrangement the user
 // chooses to keep.
@@ -58,9 +69,9 @@ func (a *app) toolbarSpec(c *ui.Context) *mygo.Toolbar {
 	}
 	items = append(items,
 		mygo.ToolbarItem{ID: "sidebar-separator", Kind: mygo.ToolbarSeparator, Divider: 0},
-		mygo.ToolbarItem{ID: "project", Title: path.Base(a.repo), Label: "Switch Project", ToolTip: a.repo,
+		mygo.ToolbarItem{ID: "project", Title: toolbarName(path.Base(a.repo)), Label: "Switch Project", ToolTip: a.repo,
 			Click: a.switchProject},
-		mygo.ToolbarItem{ID: "branch", Symbol: "arrow.triangle.branch", Title: a.branch, Label: "Switch Branch", ToolTip: a.branch,
+		mygo.ToolbarItem{ID: "branch", Symbol: "arrow.triangle.branch", Title: toolbarName(a.branch), Label: "Switch Branch", ToolTip: a.branch,
 			Hidden: a.branch == "", Disabled: busy, Click: a.toggleSwitcher},
 	)
 	items = append(items, a.pullItems()...)

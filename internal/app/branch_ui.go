@@ -79,7 +79,7 @@ func (a *app) branchLabel(c *ui.Context) {
 	b.Children(func() {
 		ui.Row(c).MinWidth(0).Gap(t.Space(1)).AlignItems(ui.Center).Children(func() {
 			ui.Icon(c, branchIcon).Size(12, 12).Shrink(0)
-			ui.Text(c, a.branch).SingleLine().Ellipsis("…").Shrink(1).MinWidth(0)
+			ui.Text(c, toolbarName(a.branch)).SingleLine().Ellipsis("…").Shrink(1).MinWidth(0)
 		})
 	})
 }
