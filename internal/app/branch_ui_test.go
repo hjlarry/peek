@@ -13,10 +13,11 @@ import (
 )
 
 func TestSwitcherUI(t *testing.T) {
-	repo, _ := testutil.RemoteRepo(t)
+	repo, remote := testutil.RemoteRepo(t)
 	testutil.Git(t, repo, "add", "--all")
 	testutil.Git(t, repo, "commit", "-m", "Update the files")
 	testutil.Git(t, repo, "branch", "feature")
+	testutil.Git(t, repo, "config", "url."+remote+".insteadOf", "https://github.com/hyoban/peek.git")
 	testutil.Git(t, repo, "remote", "set-url", "origin", "https://github.com/hyoban/peek.git")
 	log := testutil.FakeGH(t, "https://github.com/hyoban/peek")
 	a, tt := testApp(t, repo, nil)
@@ -152,7 +153,8 @@ func TestSwitcherOpensWorktree(t *testing.T) {
 // In a fork whose gh takes the upstream, its pull requests are listed,
 // linked to and checked out alike, and the fork's links are not taken.
 func TestSwitcherForkPullRequests(t *testing.T) {
-	repo, _ := testutil.RemoteRepo(t)
+	repo, remote := testutil.RemoteRepo(t)
+	testutil.Git(t, repo, "config", "url."+remote+".insteadOf", "https://github.com/org/peek.git")
 	testutil.Git(t, repo, "remote", "set-url", "origin", "https://github.com/alice/peek.git")
 	log := testutil.FakeGH(t, "https://github.com/org/peek")
 	a, tt := testApp(t, repo, nil)

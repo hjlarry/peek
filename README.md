@@ -114,6 +114,12 @@ Optional tools enable additional features:
 - Switch branches or check out a pull request from the branch name in the toolbar.
 - Browse author and co-author avatars, commit details, linked issue and pull request references, and the branch's GitHub page or pull request.
 
+Opening a pull request reads its target branch from GitHub and fetches that base
+commit before checkout. **Branch Changes** uses the common ancestor of that base
+and the checked-out head. The base is saved separately from local branches;
+reopen the PR to refresh it after its target changes. Ordinary branches continue
+to use locally available refs.
+
 ### Keep repositories close
 
 - One shared window with per-repository state, restored on the next launch.

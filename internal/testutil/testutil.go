@@ -85,7 +85,11 @@ echo "$@" >> "` + log + `"
 case "$1 $2" in
   "repo view") echo "` + github + `" ;;
   "pr list") printf '%s' '[{"number":7,"title":"Add the switcher","headRefName":"switcher","isDraft":false,"author":{"login":"ada"}}]' ;;
-  "pr view") echo "` + github + `/pull/7" ;;
+  "pr view")
+    case "$*" in
+      *"--json baseRefName,baseRefOid"*) printf '{"baseRefName":"main","baseRefOid":"%s"}' "$(git rev-parse refs/heads/main)" ;;
+      *) echo "` + github + `/pull/7" ;;
+    esac ;;
   "pr checkout") git switch -q -c "pr-$3" ;;
   *) exit 1 ;;
 esac

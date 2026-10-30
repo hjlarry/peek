@@ -187,13 +187,61 @@ func BranchPullRequestURL(ctx context.Context, repo string) string {
 	return ""
 }
 
-// CheckoutPullRequest checks out the pull request of the repository whose
-// page this is, as gh does, from a fork's too, as a local branch tracking
-// it.
+// CheckoutPullRequest fetches the PR's actual base before checking out its
+// head. Dedicated refs keep review independent of stale or modified main refs.
 func CheckoutPullRequest(ctx context.Context, repo, page string, number int) error {
-	_, err := gh(ctx, repo, "pr", "checkout", strconv.Itoa(number), "--repo", ghRepo(page))
-	return err
+	page = githubPage(page)
+	if page == "" || number <= 0 {
+		return fmt.Errorf("invalid GitHub pull request")
+	}
+	out, err := gh(ctx, repo, "pr", "view", strconv.Itoa(number), "--repo", ghRepo(page), "--json", "baseRefName,baseRefOid")
+	if err != nil {
+		return fmt.Errorf("read pull request #%d base: %w", number, err)
+	}
+	var base struct{ BaseRefName, BaseRefOid string }
+	if err := json.Unmarshal([]byte(out), &base); err != nil || base.BaseRefName == "" || !commitOID.MatchString(base.BaseRefOid) {
+		return fmt.Errorf("pull request #%d returned invalid base metadata", number)
+	}
+	if _, err := Run(ctx, repo, "check-ref-format", "refs/heads/"+base.BaseRefName); err != nil {
+		return fmt.Errorf("pull request #%d returned an invalid base branch: %w", number, err)
+	}
+	ref := fmt.Sprintf("refs/peek/pull/%s/%d/base", ghRepo(page), number)
+	if _, err := Run(ctx, repo, "check-ref-format", ref); err != nil {
+		return fmt.Errorf("invalid pull request repository: %w", err)
+	}
+	bin, err := ghExecutable()
+	if err != nil {
+		return err
+	}
+	// Use gh's login for this HTTPS fetch without changing git's saved helpers.
+	helper := "!'" + strings.ReplaceAll(bin, "'", "'\"'\"'") + "' auth git-credential"
+	if _, err := Run(ctx, repo,
+		"-c", "credential.https://github.com.helper=",
+		"-c", "credential.https://github.com.helper="+helper,
+		"fetch", "--quiet", "--no-tags", "--no-write-fetch-head", "--", page+".git", "+"+base.BaseRefOid+":"+ref); err != nil {
+		return fmt.Errorf("fetch pull request #%d base %s: %w", number, base.BaseRefName, err)
+	}
+	if _, err := gh(ctx, repo, "pr", "checkout", strconv.Itoa(number), "--repo", ghRepo(page)); err != nil {
+		return err
+	}
+	branch, err := Run(ctx, repo, "symbolic-ref", "--quiet", "HEAD")
+	if err != nil {
+		return fmt.Errorf("read checked-out pull request branch: %w", err)
+	}
+	key := "branch." + strings.TrimPrefix(branch, "refs/heads/")
+	if _, err := Run(ctx, repo, "config", key+".peek-pr-base-ref", ref); err != nil {
+		return fmt.Errorf("record pull request base: %w", err)
+	}
+	if _, err := Run(ctx, repo, "config", key+".peek-pr-base-name", base.BaseRefName); err != nil {
+		return fmt.Errorf("record pull request base name: %w", err)
+	}
+	if _, err := Run(ctx, repo, "merge-base", ref, "HEAD"); err != nil {
+		return fmt.Errorf("cannot find a common ancestor with pull request base %s; check the repository's history: %w", base.BaseRefName, err)
+	}
+	return nil
 }
+
+var commitOID = regexp.MustCompile(`^[0-9a-fA-F]{40}$`)
 
 var pullURL = regexp.MustCompile(`^(https?://github\.com/[^/]+/[^/]+)/pull/(\d+)(?:[/?#].*)?$`)
 

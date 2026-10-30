@@ -104,12 +104,10 @@ type BranchRange struct {
 	Commits          int
 }
 
-// BranchBase returns the branch's range onto the branch its pull request
-// is to merge into, or else the default branch of the repository pull
-// requests go to, or else the local main or master: from the nearer merge
-// base where the remote's and the local branch both are, as a local one
-// ahead of its remote leaves. ok is false on that branch itself, on a
-// detached HEAD, and where the branch has no commits of its own.
+// BranchBase uses the base recorded when Peek opened a pull request. Other
+// branches use their configured PR target, remote default, or local main/master,
+// preferring the nearer merge base when both remote and local refs exist.
+// ok is false without a valid base, on a detached HEAD, or with no own commits.
 func BranchBase(repo string) (r BranchRange, ok bool) {
 	g := func(args ...string) (string, error) {
 		out, err := git(repo, args...)
@@ -123,12 +121,34 @@ func BranchBase(repo string) (r BranchRange, ok bool) {
 		branchErr, endErr error
 		st                refState
 	)
-	wg.Go(func() { branch, branchErr = g("symbolic-ref", "--quiet", "--short", "HEAD") })
+	wg.Go(func() {
+		branch, branchErr = g("symbolic-ref", "--quiet", "HEAD")
+		branch = strings.TrimPrefix(branch, "refs/heads/")
+	})
 	wg.Go(func() { r.Head, endErr = g("rev-parse", "--verify", "HEAD") })
 	wg.Go(func() { st = readRefState(repo) })
 	wg.Wait()
 	if branchErr != nil || endErr != nil {
 		return r, false
+	}
+	prRef, hasPRRef := st.get("branch." + branch + ".peek-pr-base-ref")
+	prName, hasPRName := st.get("branch." + branch + ".peek-pr-base-name")
+	if hasPRRef || hasPRName {
+		// A recorded PR must never silently fall back to a different base.
+		if !hasPRRef || !hasPRName || prName == "" || !strings.HasPrefix(prRef, "refs/peek/pull/") {
+			return r, false
+		}
+		r.Onto = prName
+		var err error
+		if r.Base, err = g("merge-base", prRef, r.Head); err != nil {
+			return r, false
+		}
+		out, err := g("rev-list", "--count", r.Base+".."+r.Head)
+		if err != nil {
+			return r, false
+		}
+		r.Commits, err = strconv.Atoi(out)
+		return r, err == nil && r.Commits > 0
 	}
 	var refs []string
 	for _, remote := range st.baseRemotes() {
@@ -246,9 +266,8 @@ func (st refState) baseRemotes() []string {
 	return remotes
 }
 
-// pullBase is the branch of the remote the branch's pull request is to
-// merge into, fetched, as gh and GitHub's VS Code extension note it, ""
-// where neither does.
+// pullBase is the fetched PR target noted in local gh configuration or by
+// GitHub's VS Code extension. gh pr checkout does not populate these keys.
 func (st refState) pullBase(branch, remote string) string {
 	var onto string
 	if out, ok := st.get("branch." + branch + ".github-pr-base-branch"); ok {
