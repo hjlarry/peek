@@ -63,6 +63,7 @@ type app struct {
 	pull                     pullState
 	review                   reviewState
 	answer                   answerState
+	analysis                 analysisState
 	ask                      askState    // the popover's
 	compose                  askState    // a new conversation's field's
 	lastCodex                codexResult // which result came last
@@ -186,6 +187,7 @@ func newApp(repo string) *app {
 		ask:          askState{template: -1},
 		compose:      askState{template: -1},
 		convRow:      -1,
+		analysis:     analysisState{selected: -1},
 		terminal:     terminalState{height: 240},
 	}
 }
@@ -983,6 +985,10 @@ func (a *app) treePane(c *ui.Context) {
 		sideColumn(c, sidebarBackground(c), toolbar, "Conversations", mutedDetail(c, ""), func() { a.conversationsPane(c) })
 		return
 	}
+	if a.navigator == navAnalysis {
+		sideColumn(c, sidebarBackground(c), toolbar, "Features", mutedDetail(c, ""), func() { a.analysisPane(c) })
+		return
+	}
 	title, key, tree, label := "Changed Files", "changes", &a.changeTree, "Changes"
 	if a.mode == modeFiles {
 		title, key, tree, label = "Files", "all", &a.allTree, "Files"
@@ -1062,6 +1068,9 @@ func (a *app) filterBar(c *ui.Context, key string, f *filterState) {
 // filterFiles puts the keys in the sidebar's filter field, showing the
 // sidebar where it is hidden, as Filter Files asks.
 func (a *app) filterFiles() {
+	if a.navigator == navAnalysis {
+		a.showNavigator(navFiles)
+	}
 	if !a.showTree {
 		a.toggle(&a.showTree, &a.collapsedTree)
 	}
@@ -1255,7 +1264,7 @@ func (a *app) sync(c *ui.Context) {
 	switch a.mode {
 	case modeChanges:
 		// A file chosen in the tree shows its diff, read or not.
-		if p := a.changeTree.chosen(); p != "" && !a.changeTree.isDir(p) && p != a.file && a.commitRow == a.loadedRow {
+		if p := a.changeTree.chosen(); a.navigator != navAnalysis && p != "" && !a.changeTree.isDir(p) && p != a.file && a.commitRow == a.loadedRow {
 			a.file = p
 			if d := a.diffOf[p]; d != nil {
 				d.opened = d.read
@@ -1281,8 +1290,8 @@ func (a *app) loadChosen(c *ui.Context) (git.Commit, bool) {
 		c.Services().Invalidate()
 	}
 	if a.commitRow >= 0 && a.commitRow < len(a.commits) && a.commitRow != a.loadedRow {
-		if a.loadedRow >= 0 {
-			a.navigator = navFiles // the entry chosen shows its changes
+		if a.loadedRow >= 0 && a.navigator == navConversations {
+			a.showNavigator(navFiles) // the entry chosen shows its changes
 		}
 		a.loadedRow = a.commitRow
 		hash := a.commits[a.commitRow].Hash
@@ -1309,6 +1318,9 @@ func (a *app) current() (git.Commit, bool) {
 
 // setMode switches the mode, showing in it the file the other showed.
 func (a *app) setMode(mode int) {
+	if mode == modeFiles && a.navigator == navAnalysis {
+		a.showNavigator(navFiles)
+	}
 	if mode == a.mode {
 		return
 	}
@@ -1325,7 +1337,14 @@ func (a *app) setMode(mode int) {
 		}
 	case modeChanges:
 		if _, ok := a.changes[a.openFile]; ok && a.openFile != a.file {
-			a.changeTree.show(a.openFile) // which the diffs scroll to
+			if a.navigator == navAnalysis {
+				if !a.analysisIncludes(a.openFile) {
+					a.selectAnalysisItem(-1)
+				}
+				a.selectAnalysisFile(a.openFile)
+			} else {
+				a.changeTree.show(a.openFile) // which the diffs scroll to
+			}
 		}
 	}
 }

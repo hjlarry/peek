@@ -38,10 +38,15 @@ func (w *boundedOutput) Write(p []byte) (int, error) {
 // Bound output while Git produces it, rather than after buffering it.
 // Cancel closes the producer even if it keeps computing after a pipe closes.
 func Bounded(repo string, limit int, args ...string) (string, error) {
+	return BoundedContext(context.Background(), repo, limit, args...)
+}
+
+// BoundedContext is Bounded with cancellation from its caller.
+func BoundedContext(ctx context.Context, repo string, limit int, args ...string) (string, error) {
 	if limit < 0 {
 		return "", ErrTooLarge
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	select {
 	case gitSlots <- struct{}{}:

@@ -50,6 +50,7 @@ func isHeader(row int) bool  { return row%2 == 1 }
 // resetDiffs lists the files changed, in the tree's order, their diffs
 // not loaded yet, scrolled to the top.
 func (a *app) resetDiffs() {
+	a.analysis.selected = -1
 	a.diffs = nil
 	a.diffGen++
 	for _, p := range a.changeTree.files() {
@@ -207,7 +208,7 @@ func (a *app) readFile(p string) bool {
 }
 
 func (a *app) diffIndex(p string) int {
-	for i, d := range a.diffs {
+	for i, d := range a.visibleDiffs() {
 		if d.change.Path == p {
 			return i
 		}
@@ -239,7 +240,13 @@ func (a *app) releaseFarDiffs() {
 	}
 	first, last := a.diffList.Visible()
 	lo, hi := diffFile(first)-2, diffFile(last)+2
-	distance := func(i int) int { return max(lo-i, i-hi, 0) }
+	distance := func(i int) int {
+		visible := a.diffIndex(a.diffs[i].change.Path)
+		if visible < 0 {
+			return len(a.diffs)
+		}
+		return max(lo-visible, visible-hi, 0)
+	}
 	slices.SortFunc(loaded, func(i, j int) int { return distance(j) - distance(i) })
 	for _, i := range loaded {
 		d := a.diffs[i]
@@ -258,6 +265,10 @@ func (a *app) releaseFarDiffs() {
 // scrollToFile shows the file's diff at the top of the column, as a click
 // on it in the tree asks.
 func (a *app) scrollToFile(p string) {
+	if !a.analysisIncludes(p) {
+		a.analysis.selected = -1
+		a.diffList = ui.ListState{}
+	}
 	if i := a.diffIndex(p); i >= 0 {
 		a.scrollTarget = i
 		a.diffList.ScrollTo(headerRow(i), ui.Start)
@@ -267,7 +278,8 @@ func (a *app) scrollToFile(p string) {
 // followScroll chooses in the tree the file at the top of the column as
 // the user scrolls, once a scroll the tree asked for has come.
 func (a *app) followScroll(c *ui.Context) {
-	if len(a.diffs) == 0 {
+	diffs := a.visibleDiffs()
+	if len(diffs) == 0 {
 		return
 	}
 	first, last := a.diffList.Visible()
@@ -282,10 +294,10 @@ func (a *app) followScroll(c *ui.Context) {
 	}
 	a.settledFirst = -1
 	i := diffFile(first)
-	if i < 0 || i >= len(a.diffs) {
+	if i < 0 || i >= len(diffs) {
 		return
 	}
-	if p := a.diffs[i].change.Path; p != a.file {
+	if p := diffs[i].change.Path; p != a.file {
 		a.file = p
 		a.changeTree.show(p)
 		c.Services().Invalidate() // for the tree to choose it
@@ -293,16 +305,23 @@ func (a *app) followScroll(c *ui.Context) {
 }
 
 func (a *app) diffPane(c *ui.Context) {
+	diffs := a.visibleDiffs()
 	title, detail := "", ""
 	if cm, ok := a.current(); ok {
 		title = cm.Subject
 	}
-	if n := len(a.diffs); n > 0 {
+	if n := len(diffs); n > 0 {
 		detail = count(n, "file")
+	}
+	if item := a.selectedAnalysisItem(); item != nil {
+		title = item.Title
+		if item.Summary != "" {
+			ui.Text(c, item.Summary).FontSize(smallSize).TextColor(c.Theme().TextMuted).FillWidth().Padding(6, 12)
+		}
 	}
 	jumpBar(c, title, a.github, func() {
 		mutedDetail(c, detail)()
-		if len(a.diffs) > 0 {
+		if len(diffs) > 0 {
 			a.commentsButton(c)
 			toolGroup(c, "Diff Toolbar", func() {
 				a.changeButtons(c)
@@ -310,23 +329,25 @@ func (a *app) diffPane(c *ui.Context) {
 			})
 		}
 	}, func() {
-		if len(a.diffs) == 0 {
+		if len(diffs) == 0 {
 			emptyNote(c, "No changes")
 			return
 		}
-		a.diffList.Header = isHeader
+		a.diffList.Header = func(row int) bool {
+			return isHeader(row)
+		}
 		a.diffList.Key = func(row int) any {
 			if row == 0 {
 				return "message"
 			}
-			return diffRowKey{isHeader(row), a.diffs[diffFile(row)].change.Path}
+			return diffRowKey{isHeader(row), diffs[diffFile(row)].change.Path}
 		}
-		ui.List(c.Key("diffs"), &a.diffList, len(a.diffs)*2+1, func(row int) {
+		ui.List(c.Key("diffs"), &a.diffList, len(diffs)*2+1, func(row int) {
 			if row == 0 {
 				a.commitMessage(c)
 				return
 			}
-			d := a.diffs[diffFile(row)]
+			d := diffs[diffFile(row)]
 			if isHeader(row) {
 				a.diffHeader(c, d)
 				return

@@ -226,7 +226,8 @@ func repoPath(repo, p string) (string, bool) {
 // takes the caret then (placeCaret).
 func (a *app) openWorktreeFile(place terminalPlace) {
 	a.cancelNavigation()
-	a.mode, a.modeChoice, a.navigator = modeFiles, modeFiles, navFiles
+	a.showNavigator(navFiles)
+	a.mode, a.modeChoice = modeFiles, modeFiles
 	a.terminal.at = &place
 	if a.commitRow == 0 && a.loadedRow == 0 && a.filesFor == 0 {
 		// A file the files do not list, as one git ignores, by its path.

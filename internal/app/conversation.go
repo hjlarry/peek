@@ -41,11 +41,11 @@ type turn struct {
 
 func (t *turn) done() bool { return t.Answer != "" || t.Review != nil || t.Err != "" }
 
-// The sidebar's navigators, as Xcode's: the files, and the conversations
-// with Codex.
+// The sidebar navigators show files, conversations, or feature groups.
 const (
 	navFiles = iota
 	navConversations
+	navAnalysis
 )
 
 // newConversation starts a conversation of the request about the scope,
@@ -84,7 +84,7 @@ func (a *app) showConversation(conv *conversation) {
 			a.convRow = i
 		}
 	}
-	a.navigator = navConversations
+	a.showNavigator(navConversations)
 }
 
 // shownConversation is the conversation shown in place of the diffs, nil
@@ -186,12 +186,21 @@ func (a *app) chooseNavigator(n int) {
 	if !a.showTree {
 		a.toggle(&a.showTree, &a.collapsedTree)
 	}
+	if n == navAnalysis && a.analysis.run == nil {
+		a.startAnalysis()
+	}
 }
 
 // showNavigator shows the navigator in the sidebar: the conversations
 // with the newest chosen where none is, to show in place of the diffs.
 func (a *app) showNavigator(n int) {
+	if a.navigator == navAnalysis && n != navAnalysis {
+		a.clearAnalysisFilter()
+	}
 	a.navigator = n
+	if n == navAnalysis {
+		a.setMode(modeChanges)
+	}
 	if n == navConversations && a.convRow < 0 && len(a.conversations) > 0 {
 		a.convRow = 0
 	}
@@ -212,7 +221,7 @@ func (a *app) navigatorBar(c *ui.Context) {
 				n     int
 				label string
 				icon  *ui.SVG
-			}{{navFiles, "File Navigator", folderIcon}, {navConversations, "Conversation Navigator", commentIcon}} {
+			}{{navFiles, "File Navigator", folderIcon}, {navConversations, "Conversation Navigator", commentIcon}, {navAnalysis, "Feature Navigator", featuresIcon}} {
 				on := a.navigator == nav.n
 				b := ui.ButtonBase(c.Key("nav-" + nav.label)).Grow(1).Height(24).Radius(999).AlignItems(ui.Center).Justify(ui.Center).
 					Label(nav.label).Tooltip(nav.label).Selected(on).TextColor(t.TextMuted)
@@ -220,7 +229,7 @@ func (a *app) navigatorBar(c *ui.Context) {
 					b.Background(t.Text.Alpha(0.1)).TextColor(t.Text)
 				}
 				b.Children(func() { ui.Icon(c, nav.icon).Size(15, 15) })
-				b.OnClick(func() { a.showNavigator(nav.n) })
+				b.OnClick(func() { a.chooseNavigator(nav.n) })
 			}
 		})
 	})

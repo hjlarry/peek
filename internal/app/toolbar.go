@@ -39,7 +39,7 @@ func (a *app) toolbarSpec(c *ui.Context) *mygo.Toolbar {
 	text := float64(w) - tree - history
 	services := c.Services()
 	page := a.githubPage()
-	busy := a.push.running || a.review.running || a.pull.running
+	busy := a.push.running || a.codexRunning() || a.pull.running
 	// The sidebar's button at its end, by the line, where it stays as the
 	// sidebar slides and in full screen, without the window's buttons, as
 	// Xcode's navigator's; the project and its branch then, as the text's
@@ -52,9 +52,9 @@ func (a *app) toolbarSpec(c *ui.Context) *mygo.Toolbar {
 	}
 	items := []mygo.ToolbarItem{
 		{ID: "sidebar-start", Kind: mygo.ToolbarFlexibleSpace},
-		{ID: "navigator", Kind: mygo.ToolbarSegmented, Segments: []string{"Files", "Conversations"},
-			SegmentSymbols: []string{"list.bullet", "bubble.left.and.text.bubble.right"}, Selected: navigator, Label: "Navigator",
-			ToolTip: "Show the files or the conversations with Codex, or hide the sidebar", Select: a.chooseNavigator},
+		{ID: "navigator", Kind: mygo.ToolbarSegmented, Segments: []string{"Files", "Conversations", "Features"},
+			SegmentSymbols: []string{"list.bullet", "bubble.left.and.text.bubble.right", "square.stack.3d.up"}, Selected: navigator, Label: "Navigator",
+			ToolTip: "Show files, conversations, or feature groups; click again to hide the sidebar", Select: a.chooseNavigator},
 	}
 	items = append(items,
 		mygo.ToolbarItem{ID: "sidebar-separator", Kind: mygo.ToolbarSeparator, Divider: 0},
@@ -138,7 +138,7 @@ func codexItems(b toolButton) []mygo.ToolbarItem {
 // way.
 func (a *app) pullItems() []mygo.ToolbarItem {
 	tooltip := "Pull " + count(a.behind, "new commit") + " from " + a.upstream + ", fast-forward only"
-	busy := a.push.running || a.review.running || a.switcher.running != ""
+	busy := a.push.running || a.codexRunning() || a.switcher.running != ""
 	return []mygo.ToolbarItem{
 		{ID: "pull", Symbol: "arrow.down", Title: strconv.Itoa(a.behind), Label: "Pull", ToolTip: tooltip,
 			Hidden: a.behind == 0 || a.pull.running, Disabled: busy, Click: a.startPull},

@@ -233,6 +233,7 @@ func (a *app) close() {
 	}
 	a.review.stop()
 	a.answer.stop()
+	a.stopAnalyses()
 	a.closeTerminal()
 	if a.unwatch != nil {
 		a.unwatch()
@@ -282,6 +283,7 @@ func (p *projects) app(repo string) *app {
 	a.projects, a.avatars, a.inline, a.win = p, p.avatars, p.inline, p.win
 	a.convFile = conversationsFile(p.dir, repo)
 	a.loadConversations()
+	a.loadAnalyses()
 	if cur := p.cur; cur != nil { // the columns as they are
 		a.showHistory, a.showTree = cur.showHistory, cur.showTree
 		a.historyWidth, a.treeWidth = cur.historyWidth, cur.treeWidth
@@ -614,7 +616,7 @@ func (p *projects) syncMenu() {
 		}
 		return
 	}
-	busy := a.push.running || a.review.running || a.pull.running || a.switcher.running != ""
+	busy := a.push.running || a.codexRunning() || a.pull.running || a.switcher.running != ""
 	m.changes.show("Changes", true, a.mode == modeChanges)
 	m.files.show("Files", true, a.mode == modeFiles)
 	m.sidebar.show(showOrHide(a.showTree, "Sidebar"), true, false)

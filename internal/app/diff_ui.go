@@ -84,7 +84,8 @@ func hunkCount(d *fileDiff) int {
 // top where the user scrolled away: the next file's first where the file
 // has no more, skipping those folded as viewed.
 func (a *app) goChange(step int) {
-	if len(a.diffs) == 0 {
+	diffs := a.visibleDiffs()
+	if len(diffs) == 0 {
 		return
 	}
 	i, h := a.diffIndex(a.change.file), a.change.hunk
@@ -95,10 +96,10 @@ func (a *app) goChange(step int) {
 		}
 	}
 	if h == lastHunk {
-		h = max(hunkCount(a.diffs[i]), 0)
+		h = max(hunkCount(diffs[i]), 0)
 	}
 	for {
-		d := a.diffs[i]
+		d := diffs[i]
 		if !d.folded() {
 			n := hunkCount(d)
 			if n < 0 {
@@ -111,13 +112,13 @@ func (a *app) goChange(step int) {
 			}
 		}
 		i += step
-		if i < 0 || i >= len(a.diffs) {
+		if i < 0 || i >= len(diffs) {
 			return // none further, as at the last change
 		}
 		h = -1
 		if step < 0 {
 			h = lastHunk
-			if n := hunkCount(a.diffs[i]); n >= 0 {
+			if n := hunkCount(diffs[i]); n >= 0 {
 				h = n
 			}
 		}
@@ -128,7 +129,8 @@ func (a *app) goChange(step int) {
 // last where it has not loaded yet: its file at the top, and the hunk in
 // view once its diff shows.
 func (a *app) markChange(i, h int) {
-	d := a.diffs[i]
+	diffs := a.visibleDiffs()
+	d := diffs[i]
 	if hunkCount(d) < 0 {
 		h = max(h, 0)
 		if h > 0 {

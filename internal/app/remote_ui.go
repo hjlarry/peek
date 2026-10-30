@@ -32,7 +32,7 @@ func (a *app) pullButton(c *ui.Context) {
 	if a.pull.running {
 		tooltip = "Pulling " + a.upstream + "…"
 	}
-	busy := a.push.running || a.review.running || a.switcher.running != ""
+	busy := a.push.running || a.codexRunning() || a.switcher.running != ""
 	b := ui.ButtonBase(c.Key("pull")).Shrink(0).Padding(t.Space(0.5), t.Space(1.5)).Radius(t.Radius).
 		TextColor(t.Accent).Label("Pull").Tooltip(tooltip).Disabled(busy || a.pull.running)
 	flat(b, t, false)
@@ -50,7 +50,7 @@ func (a *app) pullButton(c *ui.Context) {
 }
 
 func (a *app) startPull() {
-	if a.pull.running || a.push.running || a.review.running || a.switcher.running != "" {
+	if a.pull.running || a.push.running || a.codexRunning() || a.switcher.running != "" {
 		return
 	}
 	a.pull.running = true

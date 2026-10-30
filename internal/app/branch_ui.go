@@ -66,7 +66,7 @@ func (a *app) branchLabel(c *ui.Context) {
 	t := c.Theme()
 	b := ui.ButtonBase(c.Key("branch")).Bind(&a.switcher.button).Shrink(1).MinWidth(0).Padding(t.Space(0.5), t.Space(1.5)).
 		Radius(t.Radius).TextColor(t.TextMuted).Label("Switch Branch").Tooltip(a.branch).
-		Disabled(a.push.running || a.review.running || a.pull.running)
+		Disabled(a.push.running || a.codexRunning() || a.pull.running)
 	flat(b, t, a.switcher.open)
 	b.OnClick(func() {
 		if a.switcher.open {
@@ -319,7 +319,7 @@ func (a *app) switchTo(target switchTarget) {
 		}
 		return
 	}
-	if s.running != "" || a.push.running || a.review.running || a.pull.running || (target.pr == 0 && target.branch == a.branch) {
+	if s.running != "" || a.push.running || a.codexRunning() || a.pull.running || (target.pr == 0 && target.branch == a.branch) {
 		if target.branch == a.branch {
 			s.open = false
 		}

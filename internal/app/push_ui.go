@@ -41,7 +41,7 @@ func (a *app) pushTool(c *ui.Context) toolButton {
 		label, tooltip = "Shipped", a.push.status
 	}
 	checkingOut := a.switcher.running != ""
-	disabled := a.review.running || checkingOut || a.pull.running || !a.canPush
+	disabled := a.codexRunning() || checkingOut || a.pull.running || !a.canPush
 	switch {
 	case checkingOut:
 		tooltip = "Checking out " + a.switcher.running + "…"
@@ -54,7 +54,7 @@ func (a *app) pushTool(c *ui.Context) toolButton {
 }
 
 func (a *app) startPush() {
-	if a.push.running || a.review.running || a.switcher.running != "" || a.pull.running || !a.canPush {
+	if a.push.running || a.codexRunning() || a.switcher.running != "" || a.pull.running || !a.canPush {
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)

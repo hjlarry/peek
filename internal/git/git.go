@@ -216,7 +216,7 @@ func LoadChanges(repo, hash string) ([]Change, error) {
 	if base, head, ok := SplitRange(hash); ok {
 		return countedChanges(repo, "diff", "-z", "-M", base, head)
 	}
-	return countedChanges(repo, "show", "--format=", "-z", "-M", "--root", hash)
+	return countedChanges(repo, "show", "--format=", "-z", "-M", "--root", "--first-parent", hash)
 }
 
 // countedChanges runs the git command, as show or diff, for the files it
@@ -630,7 +630,7 @@ func FileText(repo, hash, p string) (string, error) {
 // the work tree's against HEAD, or a Range's, of limit bytes at most: ErrTooLarge where
 // it is longer. A file git does not track has none.
 func Patch(repo, hash string, ch Change, limit int) (string, error) {
-	args := []string{"show", "--format=", "-M", "--root", hash}
+	args := []string{"show", "--format=", "-M", "--root", "--first-parent", hash}
 	if hash == Worktree {
 		args = []string{"diff", "-M", "HEAD"}
 	}

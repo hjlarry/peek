@@ -7,6 +7,7 @@ func icon(shapes string) *ui.SVG {
 }
 
 var (
+	featuresIcon = icon(`<path d="M8 1.5l6.5 3.3L8 8.1 1.5 4.8zM1.5 8L8 11.3 14.5 8M1.5 11.2L8 14.5l6.5-3.3"/>`)
 	historyIcon  = icon(`<rect x="1.5" y="2.5" width="13" height="11" rx="2"/><path d="M10 2.5v11"/>`)
 	terminalIcon = icon(`<rect x="1.5" y="2.5" width="13" height="11" rx="2"/><path d="M4.5 6l2 2-2 2M8 10.5h3.5"/>`)
 	sidebarIcon  = icon(`<rect x="1.5" y="2.5" width="13" height="11" rx="2"/><path d="M6 2.5v11"/>`)

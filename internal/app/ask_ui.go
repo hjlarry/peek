@@ -50,7 +50,7 @@ const (
 
 // codexRunning reports whether Codex works on a request, of which there
 // is one at a time.
-func (a *app) codexRunning() bool { return a.answer.running || a.review.running }
+func (a *app) codexRunning() bool { return a.answer.running || a.review.running || a.analysisRunning() }
 
 // templateOf is the template of a field's request, nil for none.
 func templateOf(s *askState) *askTemplate {
@@ -195,6 +195,9 @@ func (a *app) send(conv *conversation) {
 // which it stops, or the button opening the popover, titled with the
 // verdict of the review where it came last.
 func (a *app) codexTool(c *ui.Context) toolButton {
+	if run := a.analysis.run; run != nil && run.running {
+		return run.activity(c, "Analyzing…", "Codex is grouping changes by feature", "Cancel Analysis")
+	}
 	if a.review.running {
 		return a.review.activity(c, "Reviewing…", "Codex is reviewing the changes", "Stop Review")
 	}

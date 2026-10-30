@@ -212,6 +212,36 @@ changes, a commit, or the branch comparison. **Repository → Explain Changes**
 code in a read-only sandbox using your existing login and settings. The toolbar
 shows progress and lets you stop the current request.
 
+### Feature groups
+
+Choose the **Features** icon beside Files and Conversations in the top-left
+navigator to organize the currently selected working-tree changes, commit, or
+branch comparison. Codex groups production files by intent, with a short English
+title and one-sentence summary.
+The grouping approach is inspired by [pulls.review](https://github.com/antfu/pulls.review).
+
+Click a group in the left sidebar to show only its files' complete diffs.
+Each file belongs to exactly one group. Click a file within the selected group
+to jump to it, **All Changes** to show everything, or the **Files** icon to return to the
+ordinary file navigator. Selecting a group reveals its files even if they were
+previously folded as viewed.
+
+Tests (including fixtures, mocks, stories and snapshots), documentation, and
+lockfiles/generated files have fixed groups, shown only when present. Configuration
+and dependency manifests are grouped by the feature they support. Changes containing
+only fixed categories are classified locally without calling Codex.
+
+The latest successful grouping is saved locally. Reopening it does not run Codex
+again; **Reanalyze** starts a new request. Requests can be cancelled, failed retries
+preserve previous groups, and changed code makes the grouping obsolete.
+
+Analysis is read-only and does not run project tests. It rejects incomplete,
+duplicate or invented file assignments. The current limit is 2 MiB of change
+inventory; generated-file bodies are omitted from the model input. File-to-directory replacements and some file-type changes that produce
+multiple patch headers report an error and must be inspected directly in the diff.
+A staged deletion recreated as an untracked file must first be staged or unstaged
+so the path has one unambiguous change.
+
 ### Review changes
 
 Choose the **Review** template in Ask Codex, or use **Repository → Review

@@ -20,6 +20,7 @@ type reviewState struct {
 }
 
 func (a *app) updateReviewSource(snapshot review.Snapshot, err string) {
+	a.invalidateAnalyses(false, snapshot, err)
 	a.reviewSource, a.reviewSourceErr = snapshot, err
 	if a.review.scope != review.BranchScope && a.review.sourceID != "" && (snapshot.ID != a.review.sourceID || err != "") {
 		a.review.outdated()
@@ -27,6 +28,7 @@ func (a *app) updateReviewSource(snapshot review.Snapshot, err string) {
 }
 
 func (a *app) updateBranchReview(snapshot review.Snapshot) {
+	a.invalidateAnalyses(true, snapshot, "")
 	a.branchReview = snapshot
 	if a.review.scope == review.BranchScope && a.review.sourceID != "" && snapshot.ID != a.review.sourceID {
 		a.review.outdated()
